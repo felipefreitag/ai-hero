@@ -1,8 +1,12 @@
 import ReactMarkdown, { type Components } from "react-markdown";
+import type { Message } from "ai";
+
+export type MessagePart = NonNullable<
+  Message["parts"]
+>[number];
 
 interface ChatMessageProps {
-  text: string;
-  role: string;
+  message: Message;
   userName: string;
 }
 
@@ -38,8 +42,8 @@ const Markdown = ({ children }: { children: string }) => {
   return <ReactMarkdown components={components}>{children}</ReactMarkdown>;
 };
 
-export const ChatMessage = ({ text, role, userName }: ChatMessageProps) => {
-  const isAI = role === "assistant";
+export const ChatMessage = ({ message, userName }: ChatMessageProps) => {
+  const isAI = message.role === "assistant";
 
   return (
     <div className="mb-6">
@@ -53,7 +57,45 @@ export const ChatMessage = ({ text, role, userName }: ChatMessageProps) => {
         </p>
 
         <div className="prose prose-invert max-w-none">
-          <Markdown>{text}</Markdown>
+          {message.parts?.map((part, index) => {
+            switch (part.type) {
+              case "text":
+                return <Markdown key={index}>{part.text}</Markdown>;
+              case "tool-invocation":
+                return (
+                  <div key={index} className="mb-4 rounded-lg bg-gray-700 p-3">
+                    <div className="text-sm font-semibold text-blue-400 mb-2">
+                      Tool: {part.toolInvocation.toolName}
+                    </div>
+                    {part.toolInvocation.state === "partial-call" && (
+                      <div className="text-gray-400">Calling...</div>
+                    )}
+                    {part.toolInvocation.state === "call" && (
+                      <div>
+                        <div className="text-gray-400 text-sm mb-1">Arguments:</div>
+                        <pre className="text-xs bg-gray-800 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(part.toolInvocation.args, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {part.toolInvocation.state === "result" && (
+                      <div>
+                        <div className="text-gray-400 text-sm mb-1">Arguments:</div>
+                        <pre className="text-xs bg-gray-800 p-2 rounded overflow-x-auto mb-2">
+                          {JSON.stringify(part.toolInvocation.args, null, 2)}
+                        </pre>
+                        <div className="text-gray-400 text-sm mb-1">Result:</div>
+                        <pre className="text-xs bg-gray-800 p-2 rounded overflow-x-auto">
+                          {JSON.stringify(part.toolInvocation.result, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                );
+              default:
+                return null;
+            }
+          }) ?? <Markdown>{message.content}</Markdown>}
         </div>
       </div>
     </div>
