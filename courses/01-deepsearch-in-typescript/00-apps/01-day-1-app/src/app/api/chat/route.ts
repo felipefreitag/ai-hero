@@ -6,10 +6,60 @@ import {
 import { z } from "zod";
 import { model } from "~/models";
 import { searchSerper } from "~/serper";
+import { auth } from "~/server/auth";
+import { db } from "~/server/db";
+import { requests, users } from "~/server/db/schema";
+import { eq, and, gte, count } from "drizzle-orm";
 
 export const maxDuration = 60;
 
+// Rate limit configuration
+const DAILY_REQUEST_LIMIT = 1;
+
 export async function POST(request: Request) {
+  // Check authentication
+  const session = await auth();
+  if (!session?.user?.id) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const userId = session.user.id;
+
+  // Get user data to check if they are an admin
+  const [user] = await db
+    .select({ isAdmin: users.isAdmin })
+    .from(users)
+    .where(eq(users.id, userId));
+
+  if (!user) {
+    return new Response("User not found", { status: 404 });
+  }
+
+  // Check rate limit for non-admin users
+  if (!user.isAdmin) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [requestCount] = await db
+      .select({ count: count() })
+      .from(requests)
+      .where(
+        and(
+          eq(requests.userId, userId),
+          gte(requests.requestedAt, today)
+        )
+      );
+
+    if (requestCount && requestCount.count >= DAILY_REQUEST_LIMIT) {
+      return new Response("Daily request limit exceeded", { status: 429 });
+    }
+  }
+
+  // Record the request
+  await db.insert(requests).values({
+    userId,
+  });
+
   const body = (await request.json()) as {
     messages: Array<Message>;
   };
