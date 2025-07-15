@@ -11,11 +11,11 @@ export const upsertChat = async (opts: {
 }) => {
   const { userId, chatId, title, messages: chatMessages } = opts;
 
-  // Check if chat exists and belongs to user
+  // Check if chat exists for any user
   const existingChat = await db
     .select()
     .from(chats)
-    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
+    .where(eq(chats.id, chatId))
     .limit(1);
 
   if (existingChat.length === 0) {
@@ -26,6 +26,11 @@ export const upsertChat = async (opts: {
       title,
     });
   } else {
+    // Verify the chat belongs to the current user
+    if (existingChat[0]?.userId !== userId) {
+      throw new Error(`Chat ${chatId} does not belong to user ${userId}`);
+    }
+    
     // Update existing chat title and updatedAt
     await db
       .update(chats)
