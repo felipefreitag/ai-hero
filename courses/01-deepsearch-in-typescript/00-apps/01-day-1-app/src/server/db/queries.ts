@@ -50,7 +50,7 @@ export const upsertChat = async (opts: {
       chatMessages.map((message, index) => ({
         chatId,
         role: message.role,
-        parts: message.content,
+        parts: message.parts,
         order: index,
       }))
     );

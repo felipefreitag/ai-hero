@@ -2,6 +2,7 @@ import type { Message } from "ai";
 import {
   streamText,
   createDataStreamResponse,
+  appendResponseMessages,
 } from "ai";
 import { z } from "zod";
 import { model } from "~/models";
@@ -10,6 +11,7 @@ import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { requests, users } from "~/server/db/schema";
 import { eq, and, gte, count } from "drizzle-orm";
+import { upsertChat, getChat } from "~/server/db/queries";
 
 export const maxDuration = 60;
 
@@ -62,11 +64,35 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     messages: Array<Message>;
+    chatId?: string;
   };
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      const { messages } = body;
+      const { messages, chatId } = body;
+      
+      // If chatId is provided, verify it belongs to the current user
+      if (chatId) {
+        const existingChat = await getChat(chatId, userId);
+        if (!existingChat) {
+          throw new Error(`Chat ${chatId} not found or does not belong to user ${userId}`);
+        }
+      }
+      
+      // Generate a new chat ID if not provided
+      const currentChatId = chatId ?? crypto.randomUUID();
+      
+      // Create the chat immediately with the user's message
+      // to protect against broken streams
+      const userMessage = messages[messages.length - 1];
+      const chatTitle = userMessage?.content?.slice(0, 50) ?? "New Chat";
+      
+      await upsertChat({
+        userId,
+        chatId: currentChatId,
+        title: chatTitle,
+        messages,
+      });
 
       const result = streamText({
         model,
@@ -104,6 +130,27 @@ Never provide information without including the source links from your search re
               }));
             },
           },
+        },
+        onFinish: async ({ response }) => {
+          try {
+            const responseMessages = response.messages;
+            
+            // Merge the original messages with the response messages
+            const updatedMessages = appendResponseMessages({
+              messages,
+              responseMessages,
+            });
+            
+            // Save the complete chat with all messages to the database
+            await upsertChat({
+              userId,
+              chatId: currentChatId,
+              title: chatTitle,
+              messages: updatedMessages,
+            });
+          } catch (error) {
+            console.error('Error saving chat:', error);
+          }
         },
       });
 
