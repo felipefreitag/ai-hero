@@ -3,15 +3,8 @@ import Link from "next/link";
 import { auth } from "~/server/auth/index.ts";
 import { ChatPage } from "./chat.tsx";
 import { AuthButton } from "../components/auth-button.tsx";
-
-const chats = [
-  {
-    id: "1",
-    title: "My First Chat",
-  },
-];
-
-const activeChatId = "1";
+import { getChats, getChat } from "~/server/db/queries";
+import type { Message } from "ai";
 
 export default async function HomePage({
   searchParams,
@@ -22,6 +15,26 @@ export default async function HomePage({
   const session = await auth();
   const userName = session?.user?.name ?? "Guest";
   const isAuthenticated = !!session?.user;
+  
+  // Fetch chats for authenticated users
+  const chats = isAuthenticated && session.user?.id 
+    ? await getChats(session.user.id)
+    : [];
+  
+  // Fetch specific chat if ID is provided
+  const chatData = id && isAuthenticated && session.user?.id
+    ? await getChat(id, session.user.id)
+    : null;
+  
+  // Convert database messages to Message type
+  const initialMessages: Message[] = chatData?.messages?.map((msg) => {  
+    return {
+      id: msg.id,
+      role: msg.role as "user" | "assistant",
+      parts: msg.parts as Message["parts"],
+      content: "",
+    };
+  }) ?? [];
 
   return (
     <div className="flex h-screen bg-gray-950">
@@ -46,9 +59,9 @@ export default async function HomePage({
             chats.map((chat) => (
               <div key={chat.id} className="flex items-center gap-2">
                 <Link
-                  href={`/?chatId=${chat.id}`}
+                  href={`/?id=${chat.id}`}
                   className={`flex-1 rounded-lg p-3 text-left text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                    chat.id === activeChatId
+                    chat.id === id
                       ? "bg-gray-700"
                       : "hover:bg-gray-750 bg-gray-800"
                   }`}
@@ -73,7 +86,7 @@ export default async function HomePage({
         </div>
       </div>
 
-      <ChatPage userName={userName} chatId={id} />
+      <ChatPage userName={userName} chatId={id} initialMessages={initialMessages} />
     </div>
   );
 }

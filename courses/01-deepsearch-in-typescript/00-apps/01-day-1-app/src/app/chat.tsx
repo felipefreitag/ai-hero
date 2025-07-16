@@ -7,13 +7,15 @@ import { useEffect } from "react";
 import { ChatMessage } from "~/components/chat-message";
 import { SignInModal } from "~/components/sign-in-modal";
 import { isNewChatCreated } from "~/utils";
+import type { Message } from "ai";
 
 interface ChatProps {
   userName: string;
   chatId: string | undefined;
+  initialMessages: Message[];
 }
 
-export const ChatPage = ({ userName, chatId }: ChatProps) => {
+export const ChatPage = ({ userName, chatId, initialMessages }: ChatProps) => {
   const router = useRouter();
   const {
     messages,
@@ -23,6 +25,7 @@ export const ChatPage = ({ userName, chatId }: ChatProps) => {
     isLoading,
     data,
   } = useChat({
+    initialMessages,
     body: {
       chatId,
     },
