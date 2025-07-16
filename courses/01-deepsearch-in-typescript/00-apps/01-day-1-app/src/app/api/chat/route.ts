@@ -22,7 +22,7 @@ const langfuse = new Langfuse({
 export const maxDuration = 60;
 
 // Rate limit configuration
-const DAILY_REQUEST_LIMIT = 1;
+const DAILY_REQUEST_LIMIT = 5;
 
 export async function POST(request: Request) {
   // Check authentication
@@ -137,7 +137,7 @@ Never provide information without including the source links from your search re
             }),
             execute: async ({ query }, { abortSignal }) => {
               const results = await searchSerper(
-                { q: query, num: 10 },
+                { q: query, num: 3 },
                 abortSignal,
               );
 
