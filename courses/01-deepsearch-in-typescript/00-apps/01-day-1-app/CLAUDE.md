@@ -170,6 +170,10 @@ Required environment variables (configure in `.env`):
 
 After completing any task, always ask the user if they would like to ask any follow-up questions about the code that has just been added. Provide 3 example follow-up questions to help guide the conversation.
 
+## Important Warnings
+
+- Never try to run the dev server on this project. Ask me to run it if needed. Check if it's running on port 3000 before asking.
+
 ## Future Enhancements (from TODO)
 
 - Handle anonymous requests with IP-based rate limiting
