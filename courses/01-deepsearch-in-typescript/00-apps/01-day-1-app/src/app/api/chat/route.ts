@@ -9,6 +9,8 @@ import { Langfuse } from "langfuse";
 import { env } from "~/env";
 import { model } from "~/models";
 import { searchSerper } from "~/serper";
+import { bulkCrawlWebsites } from "~/crawler";
+import { cacheWithRedis } from "~/server/redis/redis";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { requests, users } from "~/server/db/schema";
@@ -115,9 +117,20 @@ export async function POST(request: Request) {
             langfuseTraceId: trace.id,
           },
         },
-        system: `You are a helpful AI assistant with access to web search. 
+        system: `You are a helpful AI assistant with access to web search and page scraping capabilities. 
 
-IMPORTANT: You MUST always use the searchWeb tool to find current information before answering any question.
+IMPORTANT: You MUST always use BOTH tools for every question:
+1. FIRST use the searchWeb tool to find current information
+2. THEN use the scrapePages tool to get the full content from the search results
+
+Available tools:
+1. **searchWeb**: Search the web for current information using search queries
+2. **scrapePages**: Get the full content of web pages - YOU MUST ALWAYS USE THIS after searching
+
+Workflow for every question:
+1. Use searchWeb to find relevant URLs
+2. Use scrapePages with ALL the URLs from the search results to get complete content
+3. Provide comprehensive answers based on the full scraped content
 
 When providing answers:
 1. ALWAYS include clickable links to your sources using markdown format: [text](url)
@@ -147,6 +160,32 @@ Never provide information without including the source links from your search re
                 snippet: result.snippet,
               }));
             },
+          },
+          scrapePages: {
+            parameters: z.object({
+              urls: z.array(z.string()).describe("Array of URLs to scrape for full content"),
+            }),
+            execute: cacheWithRedis(
+              "scrapePages",
+              async ({ urls }: { urls: string[] }) => {
+                const results = await bulkCrawlWebsites({ urls });
+                
+                if (results.success) {
+                  return results.results.map((result) => ({
+                    url: result.url,
+                    success: true,
+                    content: result.result.data,
+                  }));
+                } else {
+                  return results.results.map((result) => ({
+                    url: result.url,
+                    success: result.result.success,
+                    content: result.result.success ? result.result.data : undefined,
+                    error: result.result.success ? undefined : result.result.error,
+                  }));
+                }
+              }
+            ),
           },
         },
         onFinish: async ({ response }) => {
