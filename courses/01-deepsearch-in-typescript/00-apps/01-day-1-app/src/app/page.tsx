@@ -35,7 +35,7 @@ export default async function HomePage({
     return {
       id: msg.id,
       role: msg.role as "user" | "assistant",
-      parts: msg.parts as Message["parts"],
+      parts: msg.parts,
       content: "",
     };
   }) ?? [];
