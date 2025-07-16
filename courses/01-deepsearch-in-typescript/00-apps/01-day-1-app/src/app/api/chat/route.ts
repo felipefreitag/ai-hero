@@ -82,6 +82,14 @@ export async function POST(request: Request) {
       // Generate a new chat ID if not provided
       const currentChatId = chatId ?? crypto.randomUUID();
       
+      // If this is a new chat, send the NEW_CHAT_CREATED event
+      if (!chatId) {
+        dataStream.writeData({
+          type: "NEW_CHAT_CREATED",
+          chatId: currentChatId,
+        });
+      }
+      
       // Create the chat immediately with the user's message
       // to protect against broken streams
       const userMessage = messages[messages.length - 1];
