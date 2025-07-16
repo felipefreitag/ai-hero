@@ -95,6 +95,7 @@ export async function POST(request: Request) {
       const result = streamText({
         model,
         messages,
+        experimental_telemetry: { isEnabled: true },
         system: `You are a helpful AI assistant with access to web search. 
 
 IMPORTANT: You MUST always use the searchWeb tool to find current information before answering any question.
