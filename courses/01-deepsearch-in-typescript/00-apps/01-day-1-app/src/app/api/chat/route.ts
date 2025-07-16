@@ -119,6 +119,10 @@ export async function POST(request: Request) {
         },
         system: `You are a helpful AI assistant with access to web search and page scraping capabilities. 
 
+CURRENT DATE AND TIME: ${new Date().toISOString().split('T')[0]} (${new Date().toLocaleString('en-US', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })})
+
+IMPORTANT: When users ask for "up to date", "current", "latest", or "recent" information, always consider this current date in your search queries and responses. Use date-specific search terms when relevant (e.g., "2025", "today", "this week").
+
 IMPORTANT: You MUST always use BOTH tools for every question:
 1. FIRST use the searchWeb tool to find current information
 2. THEN use the scrapePages tool to get the full content from the search results
@@ -158,6 +162,7 @@ Never provide information without including the source links from your search re
                 title: result.title,
                 link: result.link,
                 snippet: result.snippet,
+                date: result.date,
               }));
             },
           },
