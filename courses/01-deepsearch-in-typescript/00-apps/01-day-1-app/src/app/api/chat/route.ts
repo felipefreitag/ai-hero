@@ -5,6 +5,8 @@ import {
   appendResponseMessages,
 } from "ai";
 import { z } from "zod";
+import { Langfuse } from "langfuse";
+import { env } from "~/env";
 import { model } from "~/models";
 import { searchSerper } from "~/serper";
 import { auth } from "~/server/auth";
@@ -12,6 +14,10 @@ import { db } from "~/server/db";
 import { requests, users } from "~/server/db/schema";
 import { eq, and, gte, count } from "drizzle-orm";
 import { upsertChat, getChat } from "~/server/db/queries";
+
+const langfuse = new Langfuse({
+  environment: env.NODE_ENV,
+});
 
 export const maxDuration = 60;
 
@@ -92,10 +98,23 @@ export async function POST(request: Request) {
         messages,
       });
 
+      // Create Langfuse trace
+      const trace = langfuse.trace({
+        sessionId: chatId,
+        name: "chat",
+        userId: session.user.id,
+      });
+
       const result = streamText({
         model,
         messages,
-        experimental_telemetry: { isEnabled: true },
+        experimental_telemetry: {
+          isEnabled: true,
+          functionId: "agent",
+          metadata: {
+            langfuseTraceId: trace.id,
+          },
+        },
         system: `You are a helpful AI assistant with access to web search. 
 
 IMPORTANT: You MUST always use the searchWeb tool to find current information before answering any question.
@@ -147,6 +166,9 @@ Never provide information without including the source links from your search re
               title: chatTitle,
               messages: updatedMessages,
             });
+            
+            // Flush Langfuse trace
+            await langfuse.flushAsync();
           } catch (error) {
             console.error('Error saving chat:', error);
           }
