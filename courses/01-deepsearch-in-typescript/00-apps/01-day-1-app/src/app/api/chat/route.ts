@@ -64,30 +64,20 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as {
     messages: Array<Message>;
-    chatId?: string;
+    chatId: string;
+    isNewChat: boolean;
   };
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      const { messages, chatId } = body;
+      const { messages, chatId, isNewChat } = body;
       
-      // If chatId is provided, verify it belongs to the current user
-      if (chatId) {
+      // If this is an existing chat, verify it belongs to the current user
+      if (!isNewChat) {
         const existingChat = await getChat(chatId, userId);
         if (!existingChat) {
           throw new Error(`Chat ${chatId} not found or does not belong to user ${userId}`);
         }
-      }
-      
-      // Generate a new chat ID if not provided
-      const currentChatId = chatId ?? crypto.randomUUID();
-      
-      // If this is a new chat, send the NEW_CHAT_CREATED event
-      if (!chatId) {
-        dataStream.writeData({
-          type: "NEW_CHAT_CREATED",
-          chatId: currentChatId,
-        });
       }
       
       // Create the chat immediately with the user's message
@@ -97,7 +87,7 @@ export async function POST(request: Request) {
       
       await upsertChat({
         userId,
-        chatId: currentChatId,
+        chatId: chatId,
         title: chatTitle,
         messages,
       });
@@ -152,7 +142,7 @@ Never provide information without including the source links from your search re
             // Save the complete chat with all messages to the database
             await upsertChat({
               userId,
-              chatId: currentChatId,
+              chatId: chatId,
               title: chatTitle,
               messages: updatedMessages,
             });

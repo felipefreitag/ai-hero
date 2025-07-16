@@ -6,16 +6,16 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ChatMessage } from "~/components/chat-message";
 import { SignInModal } from "~/components/sign-in-modal";
-import { isNewChatCreated } from "~/utils";
 import type { Message } from "ai";
 
 interface ChatProps {
   userName: string;
-  chatId: string | undefined;
+  chatId: string;
+  isNewChat: boolean;
   initialMessages: Message[];
 }
 
-export const ChatPage = ({ userName, chatId, initialMessages }: ChatProps) => {
+export const ChatPage = ({ userName, chatId, isNewChat, initialMessages }: ChatProps) => {
   const router = useRouter();
   const {
     messages,
@@ -23,21 +23,20 @@ export const ChatPage = ({ userName, chatId, initialMessages }: ChatProps) => {
     handleInputChange,
     handleSubmit,
     isLoading,
-    data,
   } = useChat({
     initialMessages,
     body: {
       chatId,
+      isNewChat,
     },
   });
 
+  // Redirect to the new chat URL when a new chat is created
   useEffect(() => {
-    const lastDataItem = data?.[data.length - 1];
-
-    if (lastDataItem && isNewChatCreated(lastDataItem)) {
-      router.push(`?id=${lastDataItem.chatId}`);
+    if (isNewChat && messages.length > 0) {
+      router.push(`?id=${chatId}`);
     }
-  }, [data, router]);
+  }, [isNewChat, messages.length, chatId, router]);
 
   return (
     <>
