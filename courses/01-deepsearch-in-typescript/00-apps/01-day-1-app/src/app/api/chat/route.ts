@@ -80,9 +80,26 @@ export async function POST(request: Request) {
     execute: async (dataStream) => {
       const { messages, chatId, isNewChat } = body;
       
+      // Create Langfuse trace for chat operations
+      const trace = langfuse.trace({
+        sessionId: chatId,
+        name: "chat",
+        userId: session.user.id,
+      });
+      
       // If this is an existing chat, verify it belongs to the current user
       if (!isNewChat) {
+        const chatVerificationSpan = trace.span({
+          name: "chat-verification",
+          input: { chatId, userId },
+        });
+        
         const existingChat = await getChat(chatId, userId);
+        
+        chatVerificationSpan.end({
+          output: { chatExists: !!existingChat },
+        });
+        
         if (!existingChat) {
           throw new Error(`Chat ${chatId} not found or does not belong to user ${userId}`);
         }
@@ -93,18 +110,20 @@ export async function POST(request: Request) {
       const userMessage = messages[messages.length - 1];
       const chatTitle = userMessage?.content?.slice(0, 50) ?? "New Chat";
       
+      const initialChatUpsertSpan = trace.span({
+        name: "initial-chat-upsert",
+        input: { userId, chatId, title: chatTitle, messageCount: messages.length },
+      });
+      
       await upsertChat({
         userId,
         chatId: chatId,
         title: chatTitle,
         messages,
       });
-
-      // Create Langfuse trace
-      const trace = langfuse.trace({
-        sessionId: chatId,
-        name: "chat",
-        userId: session.user.id,
+      
+      initialChatUpsertSpan.end({
+        output: { success: true },
       });
 
       const result = streamText({
@@ -152,10 +171,10 @@ Never provide information without including the source links from your search re
             parameters: z.object({
               query: z.string().describe("The query to search the web for"),
             }),
-            execute: async ({ query }, { abortSignal }) => {
+            execute: async ({ query }, { abortSignal }: { abortSignal?: AbortSignal }) => {
               const results = await searchSerper(
                 { q: query, num: 3 },
-                abortSignal,
+                abortSignal ?? undefined,
               );
 
               return results.organic.map((result) => ({
@@ -204,11 +223,20 @@ Never provide information without including the source links from your search re
             });
             
             // Save the complete chat with all messages to the database
+            const finalChatUpsertSpan = trace.span({
+              name: "final-chat-upsert",
+              input: { userId, chatId, title: chatTitle, messageCount: updatedMessages.length },
+            });
+            
             await upsertChat({
               userId,
               chatId: chatId,
               title: chatTitle,
               messages: updatedMessages,
+            });
+            
+            finalChatUpsertSpan.end({
+              output: { success: true },
             });
             
             // Flush Langfuse trace
