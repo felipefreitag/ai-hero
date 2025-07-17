@@ -11,6 +11,7 @@ import { db } from "~/server/db";
 import { requests, users } from "~/server/db/schema";
 import { eq, and, gte, count } from "drizzle-orm";
 import { upsertChat, getChat } from "~/server/db/queries";
+import { checkRateLimit, recordRateLimit, type RateLimitConfig } from "~/server/rate-limit";
 
 const langfuse = new Langfuse({
   environment: env.NODE_ENV,
@@ -21,7 +22,32 @@ export const maxDuration = 60;
 // Rate limit configuration
 const DAILY_REQUEST_LIMIT = 5;
 
+// Global rate limit configuration
+const chatRateLimitConfig: RateLimitConfig = {
+  maxRequests: 1,
+  maxRetries: 3,
+  windowMs: 20_000, // 20 seconds
+  keyPrefix: "chat",
+};
+
 export async function POST(request: Request) {
+  // Check global rate limit
+  const rateLimitCheck = await checkRateLimit(chatRateLimitConfig);
+
+  if (!rateLimitCheck.allowed) {
+    console.log("Rate limit exceeded, waiting...");
+    const isAllowed = await rateLimitCheck.retry();
+    // If the rate limit is still exceeded after retries, return a 429
+    if (!isAllowed) {
+      return new Response("Rate limit exceeded", {
+        status: 429,
+      });
+    }
+  }
+
+  // Record the request in the global rate limit
+  await recordRateLimit(chatRateLimitConfig);
+
   // Check authentication
   const session = await auth();
   if (!session?.user?.id) {
