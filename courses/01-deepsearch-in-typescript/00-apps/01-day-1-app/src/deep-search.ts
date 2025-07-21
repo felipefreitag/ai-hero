@@ -8,6 +8,7 @@ import { model } from "~/models";
 import { searchSerper, type SerperTool } from "~/serper";
 import { bulkCrawlWebsites } from "~/crawler";
 import { cacheWithRedis } from "~/server/redis/redis";
+import { env } from "~/env";
 
 export const streamFromDeepSearch = (opts: {
   messages: Message[];
@@ -33,7 +34,7 @@ Available tools:
 2. **scrapePages**: Get the full content of web pages - YOU MUST ALWAYS USE THIS after searching
 
 Workflow for every question:
-1. Use searchWeb to find relevant URLs
+1. Use searchWeb to find ${env.SEARCH_RESULTS_COUNT} relevant URLs
 2. Use scrapePages with ALL the URLs from the search results to get complete content
 3. Provide comprehensive answers based on the full scraped content
 
@@ -55,7 +56,7 @@ Never provide information without including the source links from your search re
         execute: async ({ query }, { abortSignal }: { abortSignal?: AbortSignal }) => {
           /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-unsafe-assignment */
           const results = await searchSerper(
-            { q: query, num: 3 },
+            { q: query, num: env.SEARCH_RESULTS_COUNT },
             abortSignal,
           ) as SerperTool.SearchResult;
 
