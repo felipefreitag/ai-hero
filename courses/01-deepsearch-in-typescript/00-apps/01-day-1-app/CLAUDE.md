@@ -182,3 +182,7 @@ After completing any task, always ask the user if they would like to ask any fol
 - Add evaluation system
 - Handle conversations longer than context window with summarization
 - Implement LLM follow-up question generation
+
+## Execution Guidelines
+
+- Do not run evals, ask the user to do it
