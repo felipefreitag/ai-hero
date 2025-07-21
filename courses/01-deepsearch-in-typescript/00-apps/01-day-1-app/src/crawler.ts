@@ -79,7 +79,7 @@ const extractArticleText = (html: string): string => {
     const element = $(selector);
     if (element.length) {
       content = turndownService.turndown(
-        element.html() || "",
+        element.html() ?? "",
       );
       break;
     }
@@ -87,7 +87,7 @@ const extractArticleText = (html: string): string => {
 
   if (!content) {
     content = turndownService.turndown(
-      $("body").html() || "",
+      $("body").html() ?? "",
     );
   }
 
@@ -114,7 +114,7 @@ const checkRobotsTxt = async (
     return (
       robots.isAllowed(url, "LinkedInBot") ?? true
     );
-  } catch (error) {
+  } catch {
     // If there's an error checking robots.txt, assume crawling is allowed
     return true;
   }
@@ -147,14 +147,14 @@ export const bulkCrawlWebsites = async (
       .join("\n");
 
     return {
-      results,
+      results: results as { url: string; result: CrawlResponse }[],
       success: false,
       error: `Failed to crawl some websites:\n${errors}`,
     };
   }
 
   return {
-    results,
+    results: results as { url: string; result: CrawlSuccessResponse }[],
     success: true,
   } as BulkCrawlResponse;
 };

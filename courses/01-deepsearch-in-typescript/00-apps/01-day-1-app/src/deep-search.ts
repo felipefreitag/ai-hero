@@ -5,7 +5,7 @@ import {
 } from "ai";
 import { z } from "zod";
 import { model } from "~/models";
-import { searchSerper } from "~/serper";
+import { searchSerper, type SerperTool } from "~/serper";
 import { bulkCrawlWebsites } from "~/crawler";
 import { cacheWithRedis } from "~/server/redis/redis";
 
@@ -53,17 +53,19 @@ Never provide information without including the source links from your search re
           query: z.string().describe("The query to search the web for"),
         }),
         execute: async ({ query }, { abortSignal }: { abortSignal?: AbortSignal }) => {
+          /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-unsafe-assignment */
           const results = await searchSerper(
             { q: query, num: 3 },
-            abortSignal ?? undefined,
-          );
+            abortSignal,
+          ) as SerperTool.SearchResult;
 
-          return results.organic.map((result) => ({
+          return results.organic.map((result: SerperTool.OrganicResult) => ({
             title: result.title,
             link: result.link,
             snippet: result.snippet,
             date: result.date,
           }));
+          /* eslint-enable @typescript-eslint/no-unnecessary-type-assertion, @typescript-eslint/no-unsafe-assignment */
         },
       },
       scrapePages: {
@@ -100,7 +102,9 @@ Never provide information without including the source links from your search re
 export async function askDeepSearch(messages: Message[]) {
   const result = streamFromDeepSearch({
     messages,
-    onFinish: () => {}, // just a stub
+    onFinish: () => {
+      // just a stub
+    },
     telemetry: {
       isEnabled: false,
     },
