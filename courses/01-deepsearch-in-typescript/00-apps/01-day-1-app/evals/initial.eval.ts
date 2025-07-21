@@ -7,6 +7,18 @@ evalite("Deep Search Eval", {
   data: async (): Promise<{ input: string; expected: string }[]> => {
     return [
       {
+        input: 'Who bought the app Windsurf?',
+        expected: 'Cognition'
+      },      
+      {
+        input: 'When did Monster Hunter Wilds launch?',
+        expected: 'February 28th, 2025'
+      },
+      {
+        input: 'What weapons are more used in the latest three Monster Hunter big titles?',
+        expected: 'Long sword, Greatsword, dual blades'
+      },
+      {
         input: "What is the latest version of TypeScript?",
         expected: "The current TypeScript version is 5.8.3",
       },
