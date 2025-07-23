@@ -52,6 +52,10 @@ export class SystemContext {
     this.scrapeHistory.push(...scrapes);
   }
 
+  incrementStep() {
+    this.step++;
+  }
+
   getQueryHistory(): string {
     return this.queryHistory
       .map((query) =>
