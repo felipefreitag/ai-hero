@@ -47,24 +47,34 @@ const actionSchema = z.object({
 
 export const getNextAction = async (
   context: SystemContext,
+  userQuestion: string,
 ) => {
   const result = await generateObject({
     model,
     schema: actionSchema,
-    system: `
-    You are a helpful AI assistant that can search the web, scrape URLs, or answer questions. Your goal is to determine the next best action to take based on the current context.
-    `,
-    prompt: `Based on this context, choose thenext action:
-1. If you need more information, use 'search' with a relevant query
-2. If you have URLs that need to be scraped, use 'scrape' with those URLs
-3. If you have enough information to answer the question, use 'answer'
+    system: `You are a helpful AI assistant that can search the web, scrape URLs, or answer questions. 
+
+Your goal is to help answer the user's question by determining the next best action to take. You have access to three actions:
+1. 'search' - Search the web for information relevant to the user's question
+2. 'scrape' - Get full content from URLs you've found in search results
+3. 'answer' - Provide a final answer when you have enough information
+
+CURRENT DATE AND TIME: ${new Date().toISOString().split('T')[0]} (${new Date().toLocaleString('en-US', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })})
+
+When searching, make sure your queries are relevant to the user's specific question.`,
+    prompt: `User's question: "${userQuestion}"
+
+Based on this context, choose the next action:
+1. If you need more information to answer the user's question, use 'search' with a relevant query
+2. If you have URLs from search results that need to be scraped for full content, use 'scrape' with those URLs
+3. If you have enough information to answer the user's question, use 'answer'
 
 Remember:
-- Only use 'search' if you need more information
-- Only use 'scrape' if you have URLs that need to be scraped
-- Use 'answer' when you have enough information to provide a complete answer
+- Only use 'search' if you need more information about the user's specific question
+- Only use 'scrape' if you have URLs that need to be scraped for complete content
+- Use 'answer' when you have enough information to provide a complete answer to the user's question
 
-Here is the context:
+Here is the context from previous actions:
 
 ${context.getQueryHistory()}
 

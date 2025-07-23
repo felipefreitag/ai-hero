@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type StreamTextResult } from "ai";
 import { searchSerper, type SerperTool } from "~/serper";
 import { bulkCrawlWebsites } from "~/crawler";
 import { cacheWithRedis } from "~/server/redis/redis";
@@ -45,7 +46,7 @@ export const scrapeUrl = cacheWithRedis(
   }
 );
 
-export const runAgentLoop = async (userQuestion: string, abortSignal?: AbortSignal) => {
+export const runAgentLoop = async (userQuestion: string, abortSignal?: AbortSignal): Promise<StreamTextResult<{}, string>> => {
   // A persistent container for the state of our system
   const ctx = new SystemContext();
 
@@ -53,7 +54,7 @@ export const runAgentLoop = async (userQuestion: string, abortSignal?: AbortSign
   // or we've taken 10 actions
   while (!ctx.shouldStop()) {
     // We choose the next action based on the state of our system
-    const nextAction = await getNextAction(ctx);
+    const nextAction = await getNextAction(ctx, userQuestion);
 
     // We execute the action and update the state of our system
     if (nextAction.type === "search") {

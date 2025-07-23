@@ -147,7 +147,8 @@ export async function POST(request: Request) {
         output: { success: true },
       });
 
-      const result = streamFromDeepSearch({
+      // 1. Wait for the result
+      const result = await streamFromDeepSearch({
         messages,
         telemetry: {
           isEnabled: true,
@@ -191,6 +192,7 @@ export async function POST(request: Request) {
         },
       });
 
+      // 2. Once the result is ready, merge it into the data stream
       result.mergeIntoDataStream(dataStream);
     },
     onError: (e) => {
