@@ -47,7 +47,6 @@ const actionSchema = z.object({
 
 export const getNextAction = async (
   context: SystemContext,
-  userQuestion: string,
 ) => {
   const result = await generateObject({
     model,
@@ -62,7 +61,7 @@ Your goal is to help answer the user's question by determining the next best act
 CURRENT DATE AND TIME: ${new Date().toISOString().split('T')[0]} (${new Date().toLocaleString('en-US', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })})
 
 When searching, make sure your queries are relevant to the user's specific question.`,
-    prompt: `User's question: "${userQuestion}"
+    prompt: `User's question: "${context.userQuestion}"
 
 Based on this context, choose the next action:
 1. If you need more information to answer the user's question, use 'search' with a relevant query

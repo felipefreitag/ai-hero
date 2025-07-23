@@ -4,7 +4,6 @@ import { SystemContext } from "./system-context";
 
 export const answerQuestion = (
   context: SystemContext,
-  userQuestion: string,
   options?: { isFinal?: boolean }
 ): StreamTextResult<{}, string> => {
   const isFinal = options?.isFinal ?? false;
@@ -30,7 +29,7 @@ Example format:
 - [Restaurant Name](https://example.com): Description with rating from [TripAdvisor](https://tripadvisor.com/specific-page)
 
 Never provide information without including the source links from your search results.`,
-    prompt: `User's question: "${userQuestion}"
+    prompt: `User's question: "${context.userQuestion}"
 
 Here is all the context I have gathered:
 

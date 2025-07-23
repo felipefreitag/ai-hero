@@ -26,6 +26,11 @@ const toQueryResult = (
 
 export class SystemContext {
   /**
+   * The user's original question
+   */
+  public readonly userQuestion: string;
+
+  /**
    * The current step in the loop
    */
   private step = 0;
@@ -39,6 +44,10 @@ export class SystemContext {
    * The history of all URLs scraped
    */
   private scrapeHistory: ScrapeResult[] = [];
+
+  constructor(userQuestion: string) {
+    this.userQuestion = userQuestion;
+  }
 
   shouldStop() {
     return this.step >= 10;

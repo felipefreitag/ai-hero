@@ -48,13 +48,13 @@ export const scrapeUrl = cacheWithRedis(
 
 export const runAgentLoop = async (userQuestion: string, abortSignal?: AbortSignal): Promise<StreamTextResult<{}, string>> => {
   // A persistent container for the state of our system
-  const ctx = new SystemContext();
+  const ctx = new SystemContext(userQuestion);
 
   // A loop that continues until we have an answer
   // or we've taken 10 actions
   while (!ctx.shouldStop()) {
     // We choose the next action based on the state of our system
-    const nextAction = await getNextAction(ctx, userQuestion);
+    const nextAction = await getNextAction(ctx);
 
     // We execute the action and update the state of our system
     if (nextAction.type === "search") {
@@ -75,7 +75,7 @@ export const runAgentLoop = async (userQuestion: string, abortSignal?: AbortSign
         result: r.content || ("error" in r ? r.error : undefined) || "Failed to scrape",
       })));
     } else if (nextAction.type === "answer") {
-      return answerQuestion(ctx, userQuestion);
+      return answerQuestion(ctx);
     }
 
     // We increment the step counter
@@ -84,5 +84,5 @@ export const runAgentLoop = async (userQuestion: string, abortSignal?: AbortSign
 
   // If we've taken 10 actions and still don't have an answer,
   // we ask the LLM to give its best attempt at an answer
-  return answerQuestion(ctx, userQuestion, { isFinal: true });
+  return answerQuestion(ctx, { isFinal: true });
 };
